@@ -44,15 +44,15 @@ const createItem = async (
  * @param {number} itemId the ID of the item.
  * @returns {Object} an item.
  */
-const retrieveItemById = async itemId => {
-  const query = {
-    text: 'SELECT * FROM items WHERE id = $1',
-    values: [itemId],
-  };
+const retrieveItemById = async (itemId = null) => {
+  const query = itemId
+    ? { text: 'SELECT * FROM items WHERE id = $1', values: [itemId] }
+    : { text: 'SELECT * FROM items', values: [] };
+
   const { rows } = await db.query(query);
-  // since item IDs are unique, this query will never return more than one row.
-  return rows[0];
+  return itemId ? rows[0] : rows;  // Return one item if ID provided, otherwise return all items
 };
+
 
 /**
  * Retrieves a single item.
@@ -95,13 +95,14 @@ const retrieveItemByPlaidInstitutionId = async (plaidInstitutionId, userId) => {
  */
 const retrieveItemByPlaidItemId = async plaidItemId => {
   const query = {
-    text: 'SELECT * FROM items WHERE plaid_item_id = $1',
+    text: 'SELECT * FROM items_table WHERE plaid_item_id = $1',  // Correct table name
     values: [plaidItemId],
   };
   const { rows } = await db.query(query);
-  // since Plaid item IDs are unique, this query will never return more than one row.
   return rows[0];
 };
+
+
 
 /**
  * Retrieves all items for a single user.

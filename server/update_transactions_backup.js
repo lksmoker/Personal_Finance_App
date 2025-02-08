@@ -22,15 +22,7 @@ const db = require('./db');
  * @returns {Object{}} an object containing transactions and a cursor.
  */
 const fetchTransactionUpdates = async (plaidItemId) => {
-  const item = await retrieveItemByPlaidItemId(plaidItemId);
-  console.log('🔍 Retrieved item:', item);  // Add this debug log
-
-  if (!item) {
-    throw new Error(`Item with Plaid Item ID ${plaidItemId} not found in the database.`);
-  }
-
-  const { plaid_access_token: accessToken, transactions_cursor: lastCursor } = item;
-
+  const { plaid_access_token: accessToken, transactions_cursor: lastCursor } = await retrieveItemByPlaidItemId(plaidItemId);
   let cursor = lastCursor;
 
   let added = [];
@@ -42,11 +34,7 @@ const fetchTransactionUpdates = async (plaidItemId) => {
   try {
     while (hasMore) {
       const request = { access_token: accessToken, cursor, count: batchSize };
-      const response = await plaid.transactionsSync({
-        access_token: accessToken,
-        cursor: cursor || null,  // Use saved cursor or null if no cursor exists
-      });
-      
+      const response = await plaid.transactionsSync(request);
       const data = response.data;
 
       added = added.concat(data.added);
@@ -74,8 +62,6 @@ const updateTransactions = async (plaidItemId) => {
 
   await createAccounts(plaidItemId, accounts);
   await createOrUpdateTransactions(added.concat(modified));
-console.log("✅ Processed transactions:", added.concat(modified).map(t => t.name));
-
   await deleteTransactions(removed);
   await updateItemTransactionsCursor(plaidItemId, cursor);
 
@@ -101,8 +87,8 @@ console.log("✅ Processed transactions:", added.concat(modified).map(t => t.nam
 
     // Loop through each item and update transactions
     for (const item of items) {
-      console.log(`🔄 Syncing transactions for Plaid Item ID: ${item.plaid_item_id}`);
-      await updateTransactions(item.plaid_item_id);  // Passing to the function as plaidItemId
+      console.log(`🔄 Syncing transactions for Item ID: ${item.id}`);
+      await updateTransactions(item.id);
     }
 
     // Test database connection after syncing transactions
